@@ -4,9 +4,8 @@ import math
 import matplotlib.pyplot as plt
 import time
 
-start_time = time.time()
 # ===============================
-#  🔹  Fonctions utilitaires
+#  🔹 Fonctions utilitaires
 # ===============================
 def distance(v1, v2):
     return math.sqrt((v1[0] - v2[0])**2 + (v1[1] - v2[1])**2)
@@ -112,8 +111,6 @@ def algo_genetique(matrice, population_size=50, generations=100, mutation_rate=0
 #  🎨 Visualisation
 # ===============================
 def plot_villes(villes, chemin):
-    import matplotlib.pyplot as plt
-
     fig, ax = plt.subplots()
     x = [villes[i][0] for i in chemin]
     y = [villes[i][1] for i in chemin]
@@ -132,8 +129,7 @@ def plot_villes(villes, chemin):
     ax.legend()
     ax.set_title("Visualisation du chemin optimal (trajet non cyclique)")
     ax.grid(True)
-    plt.show()
-
+    return fig
 
 # ===============================
 #  🌍 Interface Streamlit
@@ -154,17 +150,25 @@ st.write("### 🧮 Matrice des distances (arrondie)")
 st.dataframe([[round(x, 2) for x in row] for row in matrice])
 
 if st.button("🚀 Lancer l’algorithme"):
+    # --- Démarrer le chronomètre ---
+    start_time = time.time()
+
+    # --- Exécution de l'algorithme choisi ---
     if algo == "Recuit simulé":
         chemin, cout = recuit_simule(matrice)
     elif algo == "Recherche Tabou":
         chemin, cout = tabu_search(matrice)
     else:
         chemin, cout = algo_genetique(matrice)
-        end_time = time.time()
-        execution_time = end_time - start_time
 
+    # --- Arrêter le chronomètre ---
+    end_time = time.time()
+    execution_time = end_time - start_time
+
+    # --- Résultats ---
     st.success(f"✅ Chemin trouvé : {chemin}")
     st.info(f"⏱ Temps d'exécution : {execution_time:.4f} secondes")
 
+    # --- Visualisation ---
     fig = plot_villes(villes, chemin)
     st.pyplot(fig)
