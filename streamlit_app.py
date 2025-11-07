@@ -110,30 +110,27 @@ def algo_genetique(matrice, population_size=50, generations=100, mutation_rate=0
 #  🎨 Visualisation
 # ===============================
 def plot_villes(villes, chemin):
+    import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots()
+    x = [villes[i][0] for i in chemin]
+    y = [villes[i][1] for i in chemin]
 
-    # S’assurer que le cycle se referme sur la première ville
-    chemin_complet = chemin + [chemin[0]]
+    # ➤ On ne ferme plus le cycle (pas de retour à la ville 0)
+    ax.plot(x, y, 'bo-', linewidth=2)
 
-    # Extraire les coordonnées selon le chemin
-    x = [villes[i][0] for i in chemin_complet]
-    y = [villes[i][1] for i in chemin_complet]
-
-    # Tracer le chemin complet
-    ax.plot(x, y, '-o', color='blue')
-
-    # Annoter chaque ville
+    # Labels des villes
     for i, (xv, yv) in enumerate(villes):
         ax.text(xv + 0.2, yv + 0.2, f"Ville {i}", fontsize=9, color="red")
 
-    # Ajouter la première et dernière ville en surbrillance
+    # Marquer le départ et l’arrivée
     ax.scatter(villes[chemin[0]][0], villes[chemin[0]][1], color='green', s=100, label='Départ')
     ax.scatter(villes[chemin[-1]][0], villes[chemin[-1]][1], color='orange', s=100, label='Arrivée')
 
     ax.legend()
-    ax.set_title("Visualisation du chemin optimal (cycle fermé)")
+    ax.set_title("Visualisation du chemin optimal (trajet non cyclique)")
     ax.grid(True)
-    return fig
+    plt.show()
 
 
 # ===============================
