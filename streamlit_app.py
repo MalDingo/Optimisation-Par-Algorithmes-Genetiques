@@ -3,6 +3,7 @@ import random
 import math
 import matplotlib.pyplot as plt
 import time
+import numpy as np
 
 # ===============================
 #  🔹 Fonctions utilitaires
@@ -81,29 +82,77 @@ def tabu_search(matrice, iterations=200, tabu_size=15):
     return best, best_cost
 
 # ===============================
-#  🧬 Algorithme Génétique
+#  🧬 Algorithme Génétique (amélioré)
 # ===============================
-def algo_genetique(matrice, population_size=50, generations=100, mutation_rate=0.1):
-    def crossover(p1, p2):
-        point = random.randint(1, len(p1)-2)
-        child = p1[:point] + [x for x in p2 if x not in p1[:point]]
-        return child
+def selection_roulette(population, fitness):
+    total_fit = sum(fitness)
+    pick = random.uniform(0, total_fit)
+    current = 0
+    for i, f in enumerate(fitness):
+        current += f
+        if current > pick:
+            return population[i]
 
-    def mutate(etat):
-        if random.random() < mutation_rate:
-            i, j = random.sample(range(len(etat)), 2)
-            etat[i], etat[j] = etat[j], etat[i]
-        return etat
+def selection_rang(population, fitness):
+    sorted_pop = [x for _, x in sorted(zip(fitness, population))]
+    rank_probs = np.linspace(0, 1, len(population))
+    pick = random.random()
+    idx = int(pick * (len(population) - 1))
+    return sorted_pop[idx]
 
+def selection_elitiste(population, fitness):
+    idx = np.argmax(fitness)
+    return population[idx][:]
+
+def crossover_1_point(p1, p2):
+    point = random.randint(1, len(p1)-2)
+    enfant = p1[:point] + [x for x in p2 if x not in p1[:point]]
+    return enfant
+
+def crossover_2_points(p1, p2):
+    p1_idx, p2_idx = sorted(random.sample(range(len(p1)), 2))
+    enfant = p1[:p1_idx] + [x for x in p2 if x not in p1[:p1_idx] and x not in p1[p2_idx:]] + p1[p2_idx:]
+    return enfant
+
+def mutation(etat, mutation_rate):
+    if random.random() < mutation_rate:
+        i, j = random.sample(range(len(etat)), 2)
+        etat[i], etat[j] = etat[j], etat[i]
+    return etat
+
+def algo_genetique(matrice, population_size=50, generations=100, mutation_rate=0.1,
+                   selection_method="Roulette", crossover_method="1 point"):
     n = len(matrice)
     population = [random.sample(range(n), n) for _ in range(population_size)]
+
     for _ in range(generations):
-        population.sort(key=lambda x: calcul_energie(x, matrice))
-        new_pop = population[:10]
-        while len(new_pop) < population_size:
-            p1, p2 = random.sample(population[:20], 2)
-            new_pop.append(mutate(crossover(p1, p2)))
+        fitness = [1 / calcul_energie(ind, matrice) for ind in population]
+        new_pop = []
+
+        for _ in range(population_size):
+            # Sélection
+            if selection_method == "Roulette":
+                p1 = selection_roulette(population, fitness)
+                p2 = selection_roulette(population, fitness)
+            elif selection_method == "Rang":
+                p1 = selection_rang(population, fitness)
+                p2 = selection_rang(population, fitness)
+            else:
+                p1 = selection_elitiste(population, fitness)
+                p2 = selection_elitiste(population, fitness)
+
+            # Croisement
+            if crossover_method == "1 point":
+                enfant = crossover_1_point(p1, p2)
+            else:
+                enfant = crossover_2_points(p1, p2)
+
+            # Mutation
+            enfant = mutation(enfant, mutation_rate)
+            new_pop.append(enfant)
+
         population = new_pop
+
     best = min(population, key=lambda x: calcul_energie(x, matrice))
     return best, calcul_energie(best, matrice)
 
@@ -114,15 +163,11 @@ def plot_villes(villes, chemin):
     fig, ax = plt.subplots()
     x = [villes[i][0] for i in chemin]
     y = [villes[i][1] for i in chemin]
-
-    # ➤ On ne ferme plus le cycle (pas de retour à la ville 0)
     ax.plot(x, y, 'bo-', linewidth=2)
 
-    # Labels des villes
     for i, (xv, yv) in enumerate(villes):
         ax.text(xv + 0.2, yv + 0.2, f"Ville {i}", fontsize=9, color="red")
 
-    # Marquer le départ et l’arrivée
     ax.scatter(villes[chemin[0]][0], villes[chemin[0]][1], color='green', s=100, label='Départ')
     ax.scatter(villes[chemin[-1]][0], villes[chemin[-1]][1], color='orange', s=100, label='Arrivée')
 
@@ -149,26 +194,30 @@ matrice = generer_matrice(villes)
 st.write("### 🧮 Matrice des distances (arrondie)")
 st.dataframe([[round(x, 2) for x in row] for row in matrice])
 
+if algo == "Algorithme Génétique":
+    col1, col2 = st.columns(2)
+    with col1:
+        selection_method = st.selectbox("Méthode de sélection :", ["Roulette", "Rang", "Élitiste"])
+    with col2:
+        crossover_method = st.selectbox("Type de croisement :", ["1 point", "2 points"])
+else:
+    selection_method = crossover_method = None
+
 if st.button("🚀 Lancer l’algorithme"):
-    # --- Démarrer le chronomètre ---
     start_time = time.time()
 
-    # --- Exécution de l'algorithme choisi ---
     if algo == "Recuit simulé":
         chemin, cout = recuit_simule(matrice)
     elif algo == "Recherche Tabou":
         chemin, cout = tabu_search(matrice)
     else:
-        chemin, cout = algo_genetique(matrice)
+        chemin, cout = algo_genetique(matrice, selection_method=selection_method, crossover_method=crossover_method)
 
-    # --- Arrêter le chronomètre ---
     end_time = time.time()
     execution_time = end_time - start_time
 
-    # --- Résultats ---
     st.success(f"✅ Chemin trouvé : {chemin}")
     st.info(f"⏱ Temps d'exécution : {execution_time:.4f} secondes")
 
-    # --- Visualisation ---
     fig = plot_villes(villes, chemin)
     st.pyplot(fig)
