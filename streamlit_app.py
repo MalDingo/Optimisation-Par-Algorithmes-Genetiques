@@ -2,7 +2,9 @@ import streamlit as st
 import random
 import math
 import matplotlib.pyplot as plt
+import time
 
+start_time = time.time()
 # ===============================
 #  🔹  Fonctions utilitaires
 # ===============================
@@ -158,9 +160,11 @@ if st.button("🚀 Lancer l’algorithme"):
         chemin, cout = tabu_search(matrice)
     else:
         chemin, cout = algo_genetique(matrice)
+        end_time = time.time()
+        execution_time = end_time - start_time
 
     st.success(f"✅ Chemin trouvé : {chemin}")
-    st.info(f"💰 Coût spatial total : {round(cout, 2)}")
+    st.info(f"⏱ Temps d'exécution : {execution_time:.4f} secondes")
 
     fig = plot_villes(villes, chemin)
     st.pyplot(fig)
