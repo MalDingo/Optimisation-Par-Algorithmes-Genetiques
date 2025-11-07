@@ -1,39 +1,14 @@
-import streamlit as st
 import math
 import random
-import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Recuit Simulé Visualizer", page_icon="🔥", layout="centered")
-
-# --- TITRE ---
-st.title("🔥 Visualisation du Recuit Simulé (Simulated Annealing)")
-st.write("""
-Cet outil interactif permet de visualiser le **Recuit Simulé**, 
-une méthode d'optimisation inspirée du refroidissement des métaux.
-Il cherche à minimiser l'« énergie » (ici, la distance totale entre les villes).
-""")
-
-# --- PARAMÈTRES ---
-with st.expander("⚙️ Paramètres de l'algorithme", expanded=True):
-    temp_initiale = st.slider("Température initiale", 100, 5000, 1000, step=100)
-    refroid = st.slider("Facteur de refroidissement", 0.80, 0.999, 0.95)
-    iterations = st.slider("Nombre d'itérations", 100, 5000, 1000, step=100)
-    nb_villes = st.slider("Nombre de villes", 5, 10, 6)
-
-# --- MATRICE D'ÉNERGIE ---
-@st.cache_data
-def generer_matrice(nb_villes):
-    return [[0 if i == j else random.randint(2, 15) for j in range(nb_villes)] for i in range(nb_villes)]
-
-matrice_energies = generer_matrice(nb_villes)
-
-# --- FONCTIONS DU RECUIT ---
 def calcul_energie(etat, matrice_energie):
     energie_totale = 0
     for i in range(len(etat) - 1):
         energie_totale += matrice_energie[etat[i]][etat[i + 1]]
+    # Retour à la ville de départ (boucle fermée)
     energie_totale += matrice_energie[etat[-1]][etat[0]]
     return energie_totale
+
 
 def generer_voisin(etat):
     voisin = etat[:]
@@ -41,48 +16,55 @@ def generer_voisin(etat):
     voisin[i], voisin[j] = voisin[j], voisin[i]
     return voisin
 
-def recuit_simule(matrice_energie, temp_initiale, refroid, iterations):
+
+def Recuit_Simule(matrice_energie, temp_initiale=1000, refroid=0.95, iterations=1000):
     nb_villes = len(matrice_energie)
     etat_courant = list(range(nb_villes))
     random.shuffle(etat_courant)
+
     energie_courante = calcul_energie(etat_courant, matrice_energie)
     meilleur_etat = etat_courant[:]
     meilleure_energie = energie_courante
+
     temperature = temp_initiale
-    historique = [energie_courante]
 
     for _ in range(iterations):
         nouvel_etat = generer_voisin(etat_courant)
         energie_nouvelle = calcul_energie(nouvel_etat, matrice_energie)
         delta = energie_nouvelle - energie_courante
+
+        # Critère d’acceptation
         if delta < 0 or random.random() < math.exp(-delta / temperature):
             etat_courant = nouvel_etat
             energie_courante = energie_nouvelle
+
+        # Mise à jour du meilleur état trouvé
         if energie_courante < meilleure_energie:
             meilleur_etat = etat_courant[:]
             meilleure_energie = energie_courante
-        historique.append(meilleure_energie)
+
+        # Refroidissement progressif
         temperature *= refroid
-    return meilleur_etat, meilleure_energie, historique
 
-# --- BOUTON D'EXÉCUTION ---
-if st.button("🚀 Lancer le recuit simulé"):
-    with st.spinner("Exécution de l'algorithme..."):
-        meilleur_etat, meilleure_energie, historique = recuit_simule(
-            matrice_energies, temp_initiale, refroid, iterations
-        )
+    return meilleur_etat, meilleure_energie
 
-    st.success(f"✅ Énergie minimale atteinte : **{meilleure_energie}**")
-    st.write(f"Chemin final (état) : {meilleur_etat}")
 
-    # --- VISUALISATION ---
-    plt.figure(figsize=(8, 4))
-    plt.plot(historique, label="Énergie au fil des itérations")
-    plt.title("Évolution de l'énergie")
-    plt.xlabel("Itération")
-    plt.ylabel("Énergie")
-    plt.legend()
-    st.pyplot(plt)
+# ===============================
+# 🔹 Exemple avec 10 villes
+# ===============================
+matrice_energies = [
+    [0, 2, 9, 10, 7, 3, 6, 4, 8, 5],
+    [2, 0, 8, 6, 5, 9, 7, 3, 4, 6],
+    [9, 8, 0, 4, 2, 7, 5, 9, 6, 3],
+    [10, 6, 4, 0, 8, 9, 3, 5, 7, 2],
+    [7, 5, 2, 8, 0, 6, 9, 3, 4, 7],
+    [3, 9, 7, 9, 6, 0, 5, 8, 4, 3],
+    [6, 7, 5, 3, 9, 5, 0, 6, 2, 4],
+    [4, 3, 9, 5, 3, 8, 6, 0, 5, 7],
+    [8, 4, 6, 7, 4, 4, 2, 5, 0, 3],
+    [5, 6, 3, 2, 7, 3, 4, 7, 3, 0],
+]
 
-    st.caption("On observe la diminution progressive de l'énergie au fil des itérations.")
-
+meilleur_etat, meilleure_energie = Recuit_Simule(matrice_energies)
+print("Chemin trouvé :", meilleur_etat)
+print(" Énergie minimale atteinte :", meilleure_energie)
